@@ -1,0 +1,15 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/solworxco/public_html/colorbynumber
+    - /bin/mkdir -p $DEPLOYPATH
+    - /bin/mkdir -p $DEPLOYPATH/uploads
+    - /bin/mkdir -p $DEPLOYPATH/output
+    - /bin/cp index.php $DEPLOYPATH/
+    - /bin/cp process.php $DEPLOYPATH/
+    - /bin/cp preview.php $DEPLOYPATH/
+    - /bin/cp download.php $DEPLOYPATH/
+    - /bin/mkdir -p $DEPLOYPATH/lib
+    - /bin/cp lib/ColorReducer.php $DEPLOYPATH/lib/
+    - /bin/cp lib/Worksheet.php $DEPLOYPATH/lib/
+    - /bin/cp lib/fpdf.php $DEPLOYPATH/lib/
