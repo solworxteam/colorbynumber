@@ -69,12 +69,21 @@ class Worksheet
         $baseCellH = max(1, (int)floor($h / $baseGridSize));
         for ($y = 0; $y < $baseGridSize; $y++) {
             for ($x = 0; $x < $baseGridSize; $x++) {
-                $px = min($w - 1, $x * $baseCellW + $baseCellW / 2);
-                $py = min($h - 1, $y * $baseCellH + $baseCellH / 2);
-                $rgb = imagecolorat($img, (int)$px, (int)$py);
-                $r = ($rgb >> 16) & 0xFF;
-                $g = ($rgb >> 8) & 0xFF;
-                $b = $rgb & 0xFF;
+                // Sample 9 points in 3x3 grid and average for better color accuracy
+                $avgR = 0; $avgG = 0; $avgB = 0;
+                for ($dy = 0; $dy < 3; $dy++) {
+                    for ($dx = 0; $dx < 3; $dx++) {
+                        $px = min($w - 1, (int)($x * $baseCellW + $baseCellW * ($dx + 1) / 3));
+                        $py = min($h - 1, (int)($y * $baseCellH + $baseCellH * ($dy + 1) / 3));
+                        $rgb = imagecolorat($img, (int)$px, (int)$py);
+                        $avgR += ($rgb >> 16) & 0xFF;
+                        $avgG += ($rgb >> 8) & 0xFF;
+                        $avgB += $rgb & 0xFF;
+                    }
+                }
+                $r = (int)round($avgR / 9);
+                $g = (int)round($avgG / 9);
+                $b = (int)round($avgB / 9);
                 $pixel = [$r, $g, $b];
                 $pixels[] = $pixel;
                 $data[$y][$x] = $pixel;

@@ -17,7 +17,7 @@ class Config
 
     // Grid settings
     public const MIN_GRID_SIZE = 10;
-    public const MAX_GRID_SIZE = 80;
+    public const MAX_GRID_SIZE = 100;
     public const DEFAULT_GRID_SIZE = 20;
 
     // Color palette settings

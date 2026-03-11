@@ -52,10 +52,11 @@ cursor:pointer;
 
 <label>Grid Size</label>
 <select name="grid">
-<option value="20">Easy</option>
-<option value="30">Medium</option>
-<option value="40">Hard</option>
-<option value="50">Expert</option>
+<option value="20">Easy (20x20)</option>
+<option value="30">Medium (30x30)</option>
+<option value="50">Hard (50x50)</option>
+<option value="75">Expert (75x75)</option>
+<option value="100">Ultimate (100x100)</option>
 </select>
 
 <br>
