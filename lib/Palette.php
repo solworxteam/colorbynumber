@@ -189,4 +189,43 @@ class Palette
         $index = $number - 1;
         return $palette[$index] ?? null;
     }
+
+    /**
+     * Extract colors from image and assign kids color names
+     * Keeps extracted colors for better quality, but names them after kids colors
+     */
+    public static function getExtractedPaletteWithKidsNames(array $extractedColors): array
+    {
+        $kidsColors = self::getKidsPalette(11);
+        $palette = [];
+
+        foreach ($extractedColors as $rgb) {
+            // Find nearest kids color
+            $bestKidsColor = null;
+            $bestDistance = PHP_FLOAT_MAX;
+            $labPixel = self::rgbToLab($rgb);
+
+            foreach ($kidsColors as $kidsColor) {
+                $labKidsColor = self::rgbToLab($kidsColor['rgb']);
+                $dL = $labPixel[0] - $labKidsColor[0];
+                $da = $labPixel[1] - $labKidsColor[1];
+                $db = $labPixel[2] - $labKidsColor[2];
+                $distance = sqrt($dL * $dL + $da * $da + $db * $db);
+
+                if ($distance < $bestDistance) {
+                    $bestDistance = $distance;
+                    $bestKidsColor = $kidsColor;
+                }
+            }
+
+            // Use extracted RGB with kids color name
+            $palette[] = [
+                'rgb' => [$rgb[0], $rgb[1], $rgb[2]],
+                'name' => $bestKidsColor['name'] ?? 'Color',
+                'hex' => sprintf('%02x%02x%02x', $rgb[0], $rgb[1], $rgb[2])
+            ];
+        }
+
+        return $palette;
+    }
 }

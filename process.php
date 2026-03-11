@@ -113,9 +113,13 @@ if ($originalWidth > Config::MAX_IMAGE_WIDTH || $originalHeight > Config::MAX_IM
 error_log("Building adaptive grid with size: $grid");
 [$rgbGrid, $pixels] = Worksheet::buildAdaptiveGrid($img, $grid);
 
-// Use kid-friendly palette with proper color names
-error_log("Using kid-friendly palette");
-$palette = Palette::getKidsPalette($colors);
+// Extract dominant colors from image and assign kids color names
+error_log("Extracting dominant colors from image");
+$extractedColors = ColorReducer::reduce($pixels, $colors, 20);
+error_log("Extracted " . count($extractedColors) . " dominant colors");
+
+// Get palette with extracted RGB values but kids color names
+$palette = Palette::getExtractedPaletteWithKidsNames($extractedColors);
 error_log("Palette colors: " . count($palette));
 
 $numberGrid = [];
