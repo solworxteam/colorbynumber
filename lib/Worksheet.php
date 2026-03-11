@@ -72,7 +72,7 @@ class Worksheet
     /**
      * Generate a colored preview image from the number grid and palette
      */
-    public static function generateColoredPreview(array $numberGrid, array $palette, int $cellSize = 20): ?resource
+    public static function generateColoredPreview(array $numberGrid, array $palette, int $cellSize = 20)
     {
         $rows = count($numberGrid);
         if ($rows === 0) {
