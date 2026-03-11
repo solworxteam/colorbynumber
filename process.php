@@ -1,8 +1,8 @@
 <?php
 declare(strict_types=1);
 
-require __DIR__ . '/lib/ColorReducer.php';
 require __DIR__ . '/lib/Worksheet.php';
+require __DIR__ . '/lib/Palette.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -19,16 +19,19 @@ if (
 }
 
 $grid = max(10, min(80, (int)$_POST['grid']));
-$colors = max(2, min(24, (int)$_POST['colors']));
+$colors = max(2, min(11, (int)$_POST['colors']));
 
 $uploadDir = __DIR__ . '/uploads';
 $outputDir = __DIR__ . '/output';
 
-if (!is_dir($uploadDir)) {
-    mkdir($uploadDir, 0755, true);
+if (!is_dir($uploadDir) && !mkdir($uploadDir, 0755, true)) {
+    http_response_code(500);
+    exit('Failed to create uploads directory.');
 }
-if (!is_dir($outputDir)) {
-    mkdir($outputDir, 0755, true);
+
+if (!is_dir($outputDir) && !mkdir($outputDir, 0755, true)) {
+    http_response_code(500);
+    exit('Failed to create output directory.');
 }
 
 $originalName = $_FILES['image']['name'] ?? 'upload';
@@ -61,32 +64,13 @@ if ($img === false) {
 }
 
 [$rgbGrid, $pixels] = Worksheet::buildGrid($img, $grid);
-$palette = ColorReducer::reduce($pixels, $colors);
-
-function nearestPaletteIndex(array $pixel, array $palette): int {
-    $bestIndex = 0;
-    $bestDistance = PHP_INT_MAX;
-
-    foreach ($palette as $i => $color) {
-        $dr = $pixel[0] - $color[0];
-        $dg = $pixel[1] - $color[1];
-        $db = $pixel[2] - $color[2];
-        $distance = ($dr * $dr) + ($dg * $dg) + ($db * $db);
-
-        if ($distance < $bestDistance) {
-            $bestDistance = $distance;
-            $bestIndex = $i;
-        }
-    }
-
-    return $bestIndex + 1; // numbering starts at 1
-}
+$palette = Palette::getKidsPalette($colors);
 
 $numberGrid = [];
 
 foreach ($rgbGrid as $y => $row) {
     foreach ($row as $x => $pixel) {
-        $numberGrid[$y][$x] = nearestPaletteIndex($pixel, $palette);
+        $numberGrid[$y][$x] = Palette::nearestPaletteIndex($pixel, $palette);
     }
 }
 

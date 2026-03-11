@@ -25,9 +25,10 @@ $numberGrid = $data['numberGrid'];
 $palette = $data['palette'];
 ?>
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Worksheet Preview</title>
     <style>
         body {
@@ -102,15 +103,16 @@ $palette = $data['palette'];
 
 <div class="legend">
     <h3>Color Key</h3>
-    <?php foreach ($palette as $i => $color): ?>
+    <?php foreach ($palette as $i => $entry): ?>
         <?php
-            $r = (int)round($color[0]);
-            $g = (int)round($color[1]);
-            $b = (int)round($color[2]);
+            $r = (int)$entry['rgb'][0];
+            $g = (int)$entry['rgb'][1];
+            $b = (int)$entry['rgb'][2];
+            $name = $entry['name'];
         ?>
         <div class="legend-row">
             <span class="swatch" style="background: rgb(<?php echo $r; ?>, <?php echo $g; ?>, <?php echo $b; ?>);"></span>
-            <span><?php echo $i + 1; ?> = rgb(<?php echo $r; ?>, <?php echo $g; ?>, <?php echo $b; ?>)</span>
+            <span><?php echo $i + 1; ?> = <?php echo htmlspecialchars($name, ENT_QUOTES, 'UTF-8'); ?></span>
         </div>
     <?php endforeach; ?>
 </div>
