@@ -15,3 +15,4 @@ deployment:
     - /bin/cp lib/fpdf.php $DEPLOYPATH/lib/
     - /bin/mkdir -p $DEPLOYPATH/lib/font
     - /bin/cp -r lib/font/* $DEPLOYPATH/lib/font/
+    - /bin/cp lib/Palette.php $DEPLOYPATH/lib/
