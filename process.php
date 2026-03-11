@@ -93,13 +93,9 @@ error_log("Image created successfully");
 $originalWidth = imagesx($img);
 $originalHeight = imagesy($img);
 
-// Preprocess image (enhance contrast, reduce noise)
+// Preprocess image (reduce noise)
 error_log("Preprocessing image");
 $img = Worksheet::preprocessImage($img);
-
-// Remove light background if detected
-error_log("Attempting background removal");
-$img = Worksheet::removeBackground($img, 30);
 
 if ($originalWidth > Config::MAX_IMAGE_WIDTH || $originalHeight > Config::MAX_IMAGE_HEIGHT) {
     $img = Worksheet::resizeImage($img, Config::MAX_IMAGE_WIDTH, Config::MAX_IMAGE_HEIGHT, Config::RESIZE_QUALITY);
@@ -115,7 +111,7 @@ error_log("Building adaptive grid with size: $grid");
 
 // Extract dominant colors and map to kids colors
 error_log("Extracting dominant colors from image");
-$extractedColors = ColorReducer::reduce($pixels, $colors, 30);
+$extractedColors = ColorReducer::reduce($pixels, $colors, 20);
 error_log("Extracted " . count($extractedColors) . " dominant colors");
 
 // Get kids color palette (only colors that are actually represented in image)
