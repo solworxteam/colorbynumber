@@ -2,80 +2,90 @@
 declare(strict_types=1);
 
 /**
- * Worksheet Generation Pipeline
+ * Worksheet Generation Pipeline - Improved Version
  * 
- * Converts uploaded images into clean, printable color-by-number worksheets
- * using a quantized kids palette and noise reduction.
+ * Converts uploaded images into clean, printable color-by-number worksheets:
+ * 1. Downsample/pixelate image to grid size via block averaging
+ * 2. Detect background pixels (high brightness, low saturation)
+ * 3. Quantize foreground colors to kids palette using Euclidean RGB distance
+ * 4. Smooth/merge isolated cells
+ * 5. Background cells remain blank (value 0)
  */
 class Worksheet
 {
     /**
-     * Main pipeline: Image → Pixelated Grid → Number Grid with Kids Colors
+     * Main pipeline: Image → Downsampled Grid → Background Detection → Quantization → Smoothing → Number Grid
      * 
      * @param resource $img Image resource
-     * @param int $gridSize Grid resolution (e.g., 50 for 50x50)
+     * @param int $gridSize Grid resolution (e.g., 30 for 30x30)
      * @param array $palette Kids color palette with 'rgb' and 'name' keys
-     * @return array ['numberGrid' => array, 'colorGrid' => array]
+     * @return array ['numberGrid' => 2D array, 'backgroundGrid' => 2D bool array]
      */
     public static function generateWorksheet($img, int $gridSize, array $palette): array
     {
-        // Step 1: Create pixelated color grid via block averaging
-        $colorGrid = self::createPixelatedGrid($img, $gridSize);
+        // Step 1: Downsample image to grid size via block averaging
+        $colorGrid = self::downsampleImage($img, $gridSize);
         
-        // Step 2: Quantize colors to kids palette
-        $quantizedGrid = self::quantizeToKidsPalette($colorGrid, $palette);
+        // Step 2: Detect background pixels (bright, low saturation)
+        $backgroundGrid = self::detectBackground($colorGrid);
         
-        // Step 3: Reduce noise (single-cell anomalies)
-        $numberGrid = self::reduceCellNoise($quantizedGrid);
+        // Step 3: Quantize foreground colors to kids palette using Euclidean RGB
+        $quantizedGrid = self::quantizeToKidsPalette($colorGrid, $backgroundGrid, $palette);
+        
+        // Step 4: Smooth and merge isolated cells
+        $numberGrid = self::smoothCells($quantizedGrid);
         
         return [
             'numberGrid' => $numberGrid,
-            'colorGrid' => $colorGrid
+            'backgroundGrid' => $backgroundGrid
         ];
     }
 
     /**
-     * Step 1: Create pixelated grid via block averaging
-     * Divides image into blocks and samples colors from each block
+     * Step 1: Downsample image to grid size via block averaging
+     * 
+     * Divides the image into grid cells and computes the average RGB per cell.
+     * This creates a pixelated representation of the image at the target grid resolution.
      * 
      * @param resource $img Image resource
-     * @param int $gridSize Number of blocks per side (e.g., 50 → 50x50 grid)
-     * @return array 2D array of [r, g, b] pixel colors
+     * @param int $gridSize Number of cells per side (e.g., 30 → 30x30 grid)
+     * @return array 2D array where grid[$y][$x] = [r, g, b]
      */
-    private static function createPixelatedGrid($img, int $gridSize): array
+    private static function downsampleImage($img, int $gridSize): array
     {
-        $w = imagesx($img);
-        $h = imagesy($img);
-        $blockW = max(1, (int)floor($w / $gridSize));
-        $blockH = max(1, (int)floor($h / $gridSize));
+        $imgW = imagesx($img);
+        $imgH = imagesy($img);
+        $blockW = max(1, (int)floor($imgW / $gridSize));
+        $blockH = max(1, (int)floor($imgH / $gridSize));
         
-        $grid = [];
+        $colorGrid = [];
         
         for ($y = 0; $y < $gridSize; $y++) {
-            $grid[$y] = [];
+            $colorGrid[$y] = [];
             
             for ($x = 0; $x < $gridSize; $x++) {
-                // Sample multiple points across the block and average
-                $avgColor = self::sampleBlockAverage($img, $x, $y, $blockW, $blockH, $w, $h);
-                $grid[$y][$x] = $avgColor;
+                // Compute average color for this cell's block
+                $avgColor = self::averageBlockColor($img, $x, $y, $blockW, $blockH, $imgW, $imgH);
+                $colorGrid[$y][$x] = $avgColor;
             }
         }
         
-        return $grid;
+        return $colorGrid;
     }
 
     /**
-     * Sample multiple points across a block and return averaged color
-     * Uses 9-point sampling for better representation
+     * Compute average RGB color for a block of pixels
+     * 
+     * Samples 9 points distributed across the block, then averages.
      */
-    private static function sampleBlockAverage($img, int $blockX, int $blockY, 
-                                               int $blockW, int $blockH, 
-                                               int $imgW, int $imgH): array
+    private static function averageBlockColor($img, int $blockX, int $blockY, 
+                                              int $blockW, int $blockH, 
+                                              int $imgW, int $imgH): array
     {
-        $samples = 9;
         $sumR = 0;
         $sumG = 0;
         $sumB = 0;
+        $count = 0;
         
         // Sample 3x3 grid across the block
         for ($dy = 0; $dy < 3; $dy++) {
@@ -87,22 +97,72 @@ class Worksheet
                 $sumR += ($rgb >> 16) & 0xFF;
                 $sumG += ($rgb >> 8) & 0xFF;
                 $sumB += $rgb & 0xFF;
+                $count++;
             }
         }
         
         return [
-            (int)round($sumR / $samples),
-            (int)round($sumG / $samples),
-            (int)round($sumB / $samples)
+            (int)($sumR / $count),
+            (int)($sumG / $count),
+            (int)($sumB / $count)
         ];
     }
 
     /**
-     * Step 2: Quantize pixelated colors to kids palette
-     * Maps each color to the nearest kids color by CIELAB distance
-     * Returns 1-indexed color numbers (1 = first palette color)
+     * Step 2: Detect background pixels
+     * 
+     * Background criteria:
+     * - Brightness (average of RGB) > 230
+     * - Saturation (color range) < 15% of max
+     * 
+     * This prevents light backgrounds (white, light gray, light colored) from being
+     * incorrectly mapped to colors like green.
+     * 
+     * @param array $colorGrid 2D array of [r,g,b] colors
+     * @return array 2D array where backgroundGrid[$y][$x] = bool (true = background)
      */
-    private static function quantizeToKidsPalette(array $colorGrid, array $palette): array
+    private static function detectBackground(array $colorGrid): array
+    {
+        $backgroundGrid = [];
+        $rows = count($colorGrid);
+        
+        foreach ($colorGrid as $y => $row) {
+            $backgroundGrid[$y] = [];
+            $cols = count($row);
+            
+            foreach ($row as $x => $rgb) {
+                $r = $rgb[0];
+                $g = $rgb[1];
+                $b = $rgb[2];
+                
+                // Brightness check
+                $brightness = (int)(($r + $g + $b) / 3);
+                
+                // Saturation check: range / max ratio
+                $min = min($r, $g, $b);
+                $max = max($r, $g, $b);
+                $range = $max - $min;
+                $saturation = $max > 0 ? $range / $max : 0;
+                
+                // Cell is background if bright AND desaturated
+                $isBackground = ($brightness > 230) && ($saturation < 0.15);
+                
+                $backgroundGrid[$y][$x] = $isBackground;
+            }
+        }
+        
+        return $backgroundGrid;
+    }
+
+    /**
+     * Step 3: Quantize colors to kids palette
+     * 
+     * For foreground cells: find nearest palette color using Euclidean RGB distance.
+     * For background cells: assign 0 (blank, no number).
+     * 
+     * Returns 1-indexed color numbers (1 = first palette color, 0 = background/blank).
+     */
+    private static function quantizeToKidsPalette(array $colorGrid, array $backgroundGrid, array $palette): array
     {
         $numberGrid = [];
         
@@ -110,9 +170,14 @@ class Worksheet
             $numberGrid[$y] = [];
             
             foreach ($row as $x => $rgb) {
-                // Find nearest palette color
-                $colorNumber = self::findNearestColor($rgb, $palette);
-                $numberGrid[$y][$x] = $colorNumber;
+                if ($backgroundGrid[$y][$x]) {
+                    // Background cell: remains blank (0)
+                    $numberGrid[$y][$x] = 0;
+                } else {
+                    // Foreground cell: find nearest palette color
+                    $colorNumber = self::findNearestColorEuclidean($rgb, $palette);
+                    $numberGrid[$y][$x] = $colorNumber;
+                }
             }
         }
         
@@ -120,22 +185,25 @@ class Worksheet
     }
 
     /**
-     * Find nearest color in palette using CIELAB distance
-     * Converts RGB to LAB color space for perceptually accurate matching
-     * Returns 1-indexed color number
+     * Find nearest color in palette using Euclidean RGB distance
+     * 
+     * Simple and reliable for shared hosting; returns 1-indexed color number.
      */
-    private static function findNearestColor(array $rgb, array $palette): int
+    private static function findNearestColorEuclidean(array $rgb, array $palette): int
     {
         $bestIndex = 0;
         $bestDistance = PHP_FLOAT_MAX;
         
-        $labPixel = self::rgbToLab($rgb);
-        
         foreach ($palette as $i => $entry) {
-            $paletteRgb = $entry['rgb'];
-            $labPalette = self::rgbToLab($paletteRgb);
+            $pr = $entry['rgb'][0];
+            $pg = $entry['rgb'][1];
+            $pb = $entry['rgb'][2];
             
-            $distance = self::labDistance($labPixel, $labPalette);
+            $dr = $rgb[0] - $pr;
+            $dg = $rgb[1] - $pg;
+            $db = $rgb[2] - $pb;
+            
+            $distance = sqrt($dr * $dr + $dg * $dg + $db * $db);
             
             if ($distance < $bestDistance) {
                 $bestDistance = $distance;
@@ -147,11 +215,12 @@ class Worksheet
     }
 
     /**
-     * Step 3: Reduce noise by replacing isolated cells
-     * Cells that are surrounded by different colors get replaced with median color
-     * Prevents single-pixel anomalies from appearing in the final worksheet
+     * Step 4: Smooth cells and remove isolated noise
+     * 
+     * If a cell differs from its 8 neighbors (majority vote), replace it with majority.
+     * Background cells (0) are preserved.
      */
-    private static function reduceCellNoise(array &$numberGrid): array
+    private static function smoothCells(array &$numberGrid): array
     {
         $rows = count($numberGrid);
         if ($rows < 3) return $numberGrid;
@@ -159,9 +228,14 @@ class Worksheet
         $cols = count($numberGrid[0]);
         if ($cols < 3) return $numberGrid;
         
-        // Process interior cells only
+        // Process interior cells only (preserve edges)
         for ($y = 1; $y < $rows - 1; $y++) {
             for ($x = 1; $x < $cols - 1; $x++) {
+                $center = $numberGrid[$y][$x];
+                
+                // Skip background cells
+                if ($center === 0) continue;
+                
                 // Get 8 neighbors
                 $neighbors = [
                     $numberGrid[$y - 1][$x - 1], $numberGrid[$y - 1][$x], $numberGrid[$y - 1][$x + 1],
@@ -169,15 +243,26 @@ class Worksheet
                     $numberGrid[$y + 1][$x - 1], $numberGrid[$y + 1][$x], $numberGrid[$y + 1][$x + 1],
                 ];
                 
-                $center = $numberGrid[$y][$x];
-                $matchCount = count(array_filter($neighbors, fn($n) => $n === $center));
+                // Count how many neighbors match center color
+                $matchCount = 0;
+                foreach ($neighbors as $neighbor) {
+                    if ($neighbor === $center) $matchCount++;
+                }
                 
-                // If center color appears in 2 or fewer neighbors, it's isolated → replace with majority
+                // If isolated (2 or fewer matches), replace with neighbor majority
                 if ($matchCount <= 2) {
-                    $counts = array_count_values($neighbors);
-                    arsort($counts);
-                    $majorityColor = key($counts);
-                    $numberGrid[$y][$x] = $majorityColor;
+                    // Count non-background neighbors
+                    $colorCounts = [];
+                    foreach ($neighbors as $neighbor) {
+                        if ($neighbor === 0) continue; // Skip background
+                        $colorCounts[$neighbor] = ($colorCounts[$neighbor] ?? 0) + 1;
+                    }
+                    
+                    if (!empty($colorCounts)) {
+                        arsort($colorCounts);
+                        $majorityColor = key($colorCounts);
+                        $numberGrid[$y][$x] = $majorityColor;
+                    }
                 }
             }
         }
@@ -186,71 +271,10 @@ class Worksheet
     }
 
     /**
-     * Convert RGB to CIELAB color space for perceptually accurate distance
-     */
-    private static function rgbToLab(array $rgb): array
-    {
-        $r = $rgb[0] / 255.0;
-        $g = $rgb[1] / 255.0;
-        $b = $rgb[2] / 255.0;
-
-        // Apply gamma correction (sRGB)
-        if ($r > 0.04045) $r = pow(($r + 0.055) / 1.055, 2.4);
-        else $r = $r / 12.92;
-        
-        if ($g > 0.04045) $g = pow(($g + 0.055) / 1.055, 2.4);
-        else $g = $g / 12.92;
-        
-        if ($b > 0.04045) $b = pow(($b + 0.055) / 1.055, 2.4);
-        else $b = $b / 12.92;
-
-        // Convert to XYZ
-        $x = $r * 0.4124 + $g * 0.3576 + $b * 0.1805;
-        $y = $r * 0.2126 + $g * 0.7152 + $b * 0.0722;
-        $z = $r * 0.0193 + $g * 0.1192 + $b * 0.9505;
-
-        // Normalize by D65 illuminant
-        $x = $x / 0.95047;
-        $y = $y / 1.00000;
-        $z = $z / 1.08883;
-
-        // Convert to LAB
-        $delta = 6 / 29;
-        $deltaSquare = $delta * $delta;
-        $deltaCube = $delta * $deltaSquare;
-
-        if ($x > $deltaCube) $x = pow($x, 1/3);
-        else $x = $x / (3 * $deltaSquare) + 4/29;
-
-        if ($y > $deltaCube) $y = pow($y, 1/3);
-        else $y = $y / (3 * $deltaSquare) + 4/29;
-
-        if ($z > $deltaCube) $z = pow($z, 1/3);
-        else $z = $z / (3 * $deltaSquare) + 4/29;
-
-        $L = 116 * $y - 16;
-        $a = 500 * ($x - $y);
-        $b_comp = 200 * ($y - $z);
-
-        return [$L, $a, $b_comp];
-    }
-
-    /**
-     * Calculate Euclidean distance in CIELAB space
-     * Lower = more similar, higher = less similar
-     */
-    private static function labDistance(array $lab1, array $lab2): float
-    {
-        $dL = $lab1[0] - $lab2[0];
-        $da = $lab1[1] - $lab2[1];
-        $db = $lab1[2] - $lab2[2];
-        
-        return sqrt($dL * $dL + $da * $da + $db * $db);
-    }
-
-    /**
      * Generate colored preview image from number grid
-     * Used for parent reference and download
+     * 
+     * Background cells (0) remain white. Colored cells use their palette color.
+     * Used for parent reference and PDF output.
      */
     public static function generateColoredPreview(array $numberGrid, array $palette, int $cellSize = 20): ?resource
     {
@@ -271,6 +295,9 @@ class Worksheet
         
         foreach ($numberGrid as $y => $row) {
             foreach ($row as $x => $colorNum) {
+                // Skip background cells (0)
+                if ($colorNum === 0) continue;
+                
                 $paletteIndex = (int)$colorNum - 1;
                 
                 if ($paletteIndex >= 0 && $paletteIndex < count($palette)) {
@@ -296,6 +323,8 @@ class Worksheet
 
     /**
      * Resize image while maintaining aspect ratio
+     * 
+     * Used to fit large images into memory before downsampling.
      */
     public static function resizeImage($img, int $maxWidth, int $maxHeight, int $quality = 85): ?resource
     {
