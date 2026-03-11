@@ -10,6 +10,7 @@ deployment:
     - /bin/cp preview.php $DEPLOYPATH/
     - /bin/cp download.php $DEPLOYPATH/
     - /bin/mkdir -p $DEPLOYPATH/lib
+    - /bin/cp lib/Config.php $DEPLOYPATH/lib/
     - /bin/cp lib/ColorReducer.php $DEPLOYPATH/lib/
     - /bin/cp lib/Worksheet.php $DEPLOYPATH/lib/
     - /bin/cp lib/fpdf.php $DEPLOYPATH/lib/
