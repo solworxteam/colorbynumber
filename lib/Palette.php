@@ -6,6 +6,63 @@ require_once __DIR__ . '/ColorReducer.php';
 class Palette
 {
     /**
+     * Get intelligent name for a color based on RGB values
+     */
+    private static function getColorName($rgb): string {
+        $r = $rgb[0];
+        $g = $rgb[1];
+        $b = $rgb[2];
+
+        // Convert to HSL for better color naming
+        $max = max($r, $g, $b);
+        $min = min($r, $g, $b);
+        $delta = $max - $min;
+
+        // Brightness
+        $l = ($max + $min) / 510; // 0-1
+
+        // Saturation
+        if ($l < 0.5) {
+            $s = $delta / ($max + $min);
+        } else {
+            $s = $delta / (510 - $max - $min);
+        }
+
+        // Hue
+        if ($delta === 0) {
+            $h = 0;
+        } elseif ($max === $r) {
+            $h = (($g - $b) / $delta) % 6;
+        } elseif ($max === $g) {
+            $h = ($b - $r) / $delta + 2;
+        } else {
+            $h = ($r - $g) / $delta + 4;
+        }
+        $h = $h * 60;
+        if ($h < 0) $h += 360;
+
+        // Determine if grayscale
+        if ($s < 0.1) {
+            if ($l > 0.8) return 'White';
+            if ($l > 0.6) return 'Light Gray';
+            if ($l > 0.4) return 'Gray';
+            if ($l > 0.2) return 'Dark Gray';
+            return 'Black';
+        }
+
+        // Color names based on hue
+        if ($h < 15 || $h >= 345) return 'Red';
+        if ($h < 45) return 'Orange';
+        if ($h < 60) return 'Yellow';
+        if ($h < 150) return 'Green';
+        if ($h < 200) return 'Cyan';
+        if ($h < 260) return 'Blue';
+        if ($h < 290) return 'Purple';
+        if ($h < 330) return 'Pink';
+        return 'Red';
+    }
+
+    /**
      * Extract dominant colors from image using K-means clustering
      */
     public static function extractFromImage($pixels, int $maxColors): array
@@ -17,13 +74,12 @@ class Palette
         // Use K-means to find dominant colors
         $dominantColors = ColorReducer::reduce($pixels, $maxColors, 15);
 
-        // Convert to palette format with names
+        // Convert to palette format with intelligent names
         $palette = [];
-        $colorNames = ['Red', 'Blue', 'Green', 'Yellow', 'Orange', 'Purple', 'Pink', 'Brown', 'Grey', 'Black', 'White'];
 
-        foreach ($dominantColors as $i => $color) {
+        foreach ($dominantColors as $color) {
             $palette[] = [
-                'name' => $colorNames[$i % count($colorNames)],
+                'name' => self::getColorName($color),
                 'rgb' => array_map('intval', $color)
             ];
         }
