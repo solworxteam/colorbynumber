@@ -53,6 +53,16 @@ $palette = $data['palette'];
             font-size: 11px;
         }
 
+        .preview-section {
+            display: inline-block;
+            margin: 0 30px;
+            vertical-align: top;
+        }
+
+        .preview-section h3 {
+            margin-top: 0;
+        }
+
         .legend {
             width: fit-content;
             margin: 25px auto;
@@ -91,15 +101,45 @@ $palette = $data['palette'];
 
 <h2>Worksheet Preview</h2>
 
-<table>
-    <?php foreach ($numberGrid as $row): ?>
-        <tr>
-            <?php foreach ($row as $num): ?>
-                <td><?php echo (int)$num; ?></td>
+<div style="text-align: center;">
+    <div class="preview-section">
+        <h3>Worksheet to Color</h3>
+        <table>
+            <?php foreach ($numberGrid as $row): ?>
+                <tr>
+                    <?php foreach ($row as $num): ?>
+                        <td><?php echo (int)$num; ?></td>
+                    <?php endforeach; ?>
+                </tr>
             <?php endforeach; ?>
-        </tr>
-    <?php endforeach; ?>
-</table>
+        </table>
+    </div>
+
+    <div class="preview-section">
+        <h3>Colored Preview (For Parents)</h3>
+        <table>
+            <?php foreach ($numberGrid as $row): ?>
+                <tr>
+                    <?php foreach ($row as $num): ?>
+                        <?php
+                            $paletteIndex = (int)$num - 1;
+                            $color = $palette[$paletteIndex] ?? null;
+                            $rgb = $color ? $color['rgb'] : [255, 255, 255];
+                            $r = (int)$rgb[0];
+                            $g = (int)$rgb[1];
+ div style="margin-top: 30px;">
+    <a class="btn" href="download.php?id=<?php echo urlencode($id); ?>&type=numbered">Download Worksheet PDF</a>
+    <a class="btn" href="download.php?id=<?php echo urlencode($id); ?>&type=colored">Download Colored Preview PDF</a>
+</div
+                            $bgColor = "rgb($r, $g, $b)";
+                        ?>
+                        <td style="background-color: <?php echo $bgColor; ?>;">&nbsp;</td>
+                    <?php endforeach; ?>
+                </tr>
+            <?php endforeach; ?>
+        </table>
+    </div>
+</div>
 
 <div class="legend">
     <h3>Color Key</h3>

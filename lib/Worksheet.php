@@ -68,4 +68,56 @@ class Worksheet
         imagedestroy($img);
         return $resized;
     }
+
+    /**
+     * Generate a colored preview image from the number grid and palette
+     */
+    public static function generateColoredPreview(array $numberGrid, array $palette, int $cellSize = 20): ?resource
+    {
+        $rows = count($numberGrid);
+        if ($rows === 0) {
+            return null;
+        }
+
+        $cols = count($numberGrid[0]);
+        if ($cols === 0) {
+            return null;
+        }
+
+        $width = $cols * $cellSize;
+        $height = $rows * $cellSize;
+
+        $img = imagecreatetruecolor($width, $height);
+        if ($img === false) {
+            return null;
+        }
+
+        // white background
+        $white = imagecolorallocate($img, 255, 255, 255);
+        imagefill($img, 0, 0, $white);
+
+        // Fill cells with palette colors
+        foreach ($numberGrid as $y => $row) {
+            foreach ($row as $x => $Number) {
+                $paletteIndex = (int)$Number - 1;
+                
+                if ($paletteIndex >= 0 && $paletteIndex < count($palette)) {
+                    $colorData = $palette[$paletteIndex];
+                    $r = (int)$colorData['rgb'][0];
+                    $g = (int)$colorData['rgb'][1];
+                    $b = (int)$colorData['rgb'][2];
+                    $color = imagecolorallocate($img, $r, $g, $b);
+
+                    $x1 = $x * $cellSize;
+                    $y1 = $y * $cellSize;
+                    $x2 = $x1 + $cellSize - 1;
+                    $y2 = $y1 + $cellSize - 1;
+
+                    imagefilledrectangle($img, $x1, $y1, $x2, $y2, $color);
+                }
+            }
+        }
+
+        return $img;
+    }
 }

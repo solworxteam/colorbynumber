@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/lib/fpdf.php';
+require_once __DIR__ . '/lib/Worksheet.php';
 
 if (!isset($_GET['id']) || $_GET['id'] === '') {
     http_response_code(400);
@@ -9,6 +10,7 @@ if (!isset($_GET['id']) || $_GET['id'] === '') {
 }
 
 $id = basename((string)$_GET['id']);
+$type = isset($_GET['type']) && $_GET['type'] === 'colored' ? 'colored' : 'numbered';
 $jsonPath = __DIR__ . '/output/' . $id . '.json';
 
 if (!file_exists($jsonPath)) {
@@ -48,15 +50,22 @@ if ($rows === 0 || $cols === 0) {
 
 class WorksheetPDF extends FPDF
 {
+    public $type = 'numbered';
+
     public function Header(): void
     {
         $this->SetFont('Arial', 'B', 14);
-        $this->Cell(0, 8, 'Color-by-Number Worksheet', 0, 1, 'C');
+        if ($this->type === 'colored') {
+            $this->Cell(0, 8, 'Color-by-Number Worksheet (Colored Preview)', 0, 1, 'C');
+        } else {
+            $this->Cell(0, 8, 'Color-by-Number Worksheet', 0, 1, 'C');
+        }
         $this->Ln(2);
     }
 }
 
 $pdf = new WorksheetPDF('P', 'mm', 'A4');
+$pdf->type = $type;
 $pdf->AddPage();
 $pdf->SetAutoPageBreak(true, 15);
 $pdf->SetFont('Arial', '', 8);
@@ -65,11 +74,32 @@ $pageWidth = 190;
 $cell = (int)floor($pageWidth / max(1, $cols));
 $cell = max(4, min(8, $cell));
 
-foreach ($numberGrid as $row) {
-    foreach ($row as $num) {
-        $pdf->Cell($cell, $cell, (string)(int)$num, 1, 0, 'C');
+if ($type === 'colored') {
+    // Colored preview version
+    foreach ($numberGrid as $row) {
+        foreach ($row as $num) {
+            $paletteIndex = (int)$num - 1;
+            if ($paletteIndex >= 0 && $paletteIndex < count($palette)) {
+                $colorData = $palette[$paletteIndex];
+                $r = (int)$colorData['rgb'][0];
+                $g = (int)$colorData['rgb'][1];
+                $b = (int)$colorData['rgb'][2];
+                $pdf->SetFillColor($r, $g, $b);
+                $pdf->Cell($cell, $cell, '', 1, 0, 'C', true);
+            } else {
+                $pdf->Cell($cell, $cell, '', 1, 0, 'C', false);
+            }
+        }
+        $pdf->Ln();
     }
-    $pdf->Ln();
+} else {
+    // Numbered worksheet version
+    foreach ($numberGrid as $row) {
+        foreach ($row as $num) {
+            $pdf->Cell($cell, $cell, (string)(int)$num, 1, 0, 'C');
+        }
+        $pdf->Ln();
+    }
 }
 
 $pdf->Ln(8);
@@ -92,5 +122,6 @@ if (ob_get_length()) {
     ob_end_clean();
 }
 
-$pdf->Output('D', 'worksheet.pdf');
+$filename = $type === 'colored' ? 'worksheet-colored.pdf' : 'worksheet.pdf';
+$pdf->Output('D', $filename);
 exit;
