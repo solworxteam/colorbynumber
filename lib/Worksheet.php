@@ -40,7 +40,7 @@ class Worksheet
     /**
      * Resize image to fit within max dimensions while maintaining aspect ratio
      */
-    public static function resizeImage($img, int $maxWidth, int $maxHeight, int $quality = 85): ?GdImage
+    public static function resizeImage($img, int $maxWidth, int $maxHeight, int $quality = 85)
     {
         $origWidth = imagesx($img);
         $origHeight = imagesy($img);
