@@ -9,6 +9,7 @@ ini_set('error_log', __DIR__ . '/error.log');
 require __DIR__ . '/lib/Config.php';
 require __DIR__ . '/lib/Worksheet.php';
 require __DIR__ . '/lib/Palette.php';
+require __DIR__ . '/lib/ColorReducer.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -113,10 +114,20 @@ if ($originalWidth > Config::MAX_IMAGE_WIDTH || $originalHeight > Config::MAX_IM
 error_log("Building adaptive grid with size: $grid");
 [$rgbGrid, $pixels] = Worksheet::buildAdaptiveGrid($img, $grid);
 
-// Extract dominant colors from image instead of using fixed palette
-error_log("Using kid-friendly palette");
-$palette = Palette::getKidsPalette($colors);
-error_log("Palette colors: " . count($palette));
+// Extract dominant colors from image for better color fidelity
+error_log("Extracting dominant colors from image");
+$dominantColors = ColorReducer::reduce($pixels, $colors, 20);
+error_log("Extracted " . count($dominantColors) . " dominant colors");
+
+// Build palette with extracted colors
+$palette = [];
+foreach ($dominantColors as $rgbColor) {
+    $palette[] = [
+        'rgb' => [$rgbColor[0], $rgbColor[1], $rgbColor[2]],
+        'name' => 'Color ' . (count($palette) + 1),
+        'hex' => sprintf('%02x%02x%02x', $rgbColor[0], $rgbColor[1], $rgbColor[2])
+    ];
+}
 
 $numberGrid = [];
 

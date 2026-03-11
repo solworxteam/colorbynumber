@@ -107,7 +107,17 @@ $pdf->SetFont('Arial', 'B', 12);
 $pdf->Cell(0, 8, 'Color Key', 0, 1);
 $pdf->SetFont('Arial', '', 10);
 
+// Track which colors are actually used
+$usedColors = [];
+foreach ($numberGrid as $row) {
+    foreach ($row as $num) {
+        $usedColors[(int)$num] = true;
+    }
+}
+
 foreach ($palette as $i => $entry) {
+    if (!isset($usedColors[$i + 1])) continue;
+    
     $r = (int)$entry['rgb'][0];
     $g = (int)$entry['rgb'][1];
     $b = (int)$entry['rgb'][2];

@@ -140,13 +140,24 @@ $palette = $data['palette'];
 
 <div class="legend">
     <h3>Color Key</h3>
-    <?php foreach ($palette as $i => $entry): ?>
-        <?php
+    <?php
+        // Track which colors are actually used in the grid
+        $usedColors = [];
+        foreach ($numberGrid as $row) {
+            foreach ($row as $num) {
+                $usedColors[(int)$num] = true;
+            }
+        }
+        
+        // Display only used colors
+        foreach ($palette as $i => $entry):
+            if (!isset($usedColors[$i + 1])) continue;
+            
             $r = (int)$entry['rgb'][0];
             $g = (int)$entry['rgb'][1];
             $b = (int)$entry['rgb'][2];
             $name = $entry['name'];
-        ?>
+    ?>
         <div class="legend-row">
             <span class="swatch" style="background: rgb(<?php echo $r; ?>, <?php echo $g; ?>, <?php echo $b; ?>);"></span>
             <span><?php echo $i + 1; ?> = <?php echo htmlspecialchars($name, ENT_QUOTES, 'UTF-8'); ?></span>
