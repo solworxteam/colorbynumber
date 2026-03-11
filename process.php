@@ -1,5 +1,4 @@
 <?php
-
 declare(strict_types=1);
 
 require __DIR__ . '/lib/ColorReducer.php';
@@ -7,7 +6,7 @@ require __DIR__ . '/lib/Worksheet.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
-    exit('Method not allowed. Please submit the form from index.php');
+    exit('Method not allowed.');
 }
 
 if (
@@ -16,70 +15,94 @@ if (
     !is_uploaded_file($_FILES['image']['tmp_name'])
 ) {
     http_response_code(400);
-    exit('Missing image upload or form fields.');
+    exit('Missing form fields or image.');
 }
 
-$grid = max(10, min(100, (int)$_POST['grid']));
+$grid = max(10, min(80, (int)$_POST['grid']));
 $colors = max(2, min(24, (int)$_POST['colors']));
 
 $uploadDir = __DIR__ . '/uploads';
 $outputDir = __DIR__ . '/output';
 
-if (!is_dir($uploadDir) && !mkdir($uploadDir, 0755, true)) {
-    http_response_code(500);
-    exit('Could not create uploads directory.');
+if (!is_dir($uploadDir)) {
+    mkdir($uploadDir, 0755, true);
+}
+if (!is_dir($outputDir)) {
+    mkdir($outputDir, 0755, true);
 }
 
-if (!is_dir($outputDir) && !mkdir($outputDir, 0755, true)) {
-    http_response_code(500);
-    exit('Could not create output directory.');
-}
-
-$tmp = $_FILES['image']['tmp_name'];
 $originalName = $_FILES['image']['name'] ?? 'upload';
 $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
-
 $allowed = ['jpg', 'jpeg', 'png', 'webp'];
+
 if (!in_array($extension, $allowed, true)) {
     http_response_code(400);
-    exit('Only JPG, JPEG, PNG, and WEBP files are allowed.');
+    exit('Only JPG, JPEG, PNG and WEBP are allowed.');
 }
 
-$baseName = uniqid('img_', true);
-$storedFilename = $baseName . '.' . $extension;
-$storedPath = $uploadDir . '/' . $storedFilename;
+$filename = uniqid('img_', true) . '.' . $extension;
+$storedPath = $uploadDir . '/' . $filename;
 
-if (!move_uploaded_file($tmp, $storedPath)) {
+if (!move_uploaded_file($_FILES['image']['tmp_name'], $storedPath)) {
     http_response_code(500);
-    exit('Failed to save uploaded image.');
+    exit('Failed to save uploaded file.');
 }
 
 $imageData = file_get_contents($storedPath);
 if ($imageData === false) {
     http_response_code(500);
-    exit('Failed to read uploaded image.');
+    exit('Failed to read image.');
 }
 
 $img = imagecreatefromstring($imageData);
 if ($img === false) {
     http_response_code(500);
-    exit('Failed to process image. Make sure GD is enabled in PHP.');
+    exit('Failed to create image resource. Check PHP GD.');
 }
 
-[$gridData, $pixels] = Worksheet::buildGrid($img, $grid);
+[$rgbGrid, $pixels] = Worksheet::buildGrid($img, $grid);
 $palette = ColorReducer::reduce($pixels, $colors);
 
-$jsonPath = $outputDir . '/' . $storedFilename . '.json';
-$result = file_put_contents($jsonPath, json_encode([
-    'grid' => $gridData,
-    'palette' => $palette,
-    'size' => $grid,
-], JSON_PRETTY_PRINT));
+function nearestPaletteIndex(array $pixel, array $palette): int {
+    $bestIndex = 0;
+    $bestDistance = PHP_INT_MAX;
 
-if ($result === false) {
-    http_response_code(500);
-    exit('Failed to write output data.');
+    foreach ($palette as $i => $color) {
+        $dr = $pixel[0] - $color[0];
+        $dg = $pixel[1] - $color[1];
+        $db = $pixel[2] - $color[2];
+        $distance = ($dr * $dr) + ($dg * $dg) + ($db * $db);
+
+        if ($distance < $bestDistance) {
+            $bestDistance = $distance;
+            $bestIndex = $i;
+        }
+    }
+
+    return $bestIndex + 1; // numbering starts at 1
 }
 
-header('Location: preview.php?id=' . rawurlencode($storedFilename));
+$numberGrid = [];
+
+foreach ($rgbGrid as $y => $row) {
+    foreach ($row as $x => $pixel) {
+        $numberGrid[$y][$x] = nearestPaletteIndex($pixel, $palette);
+    }
+}
+
+$jsonData = [
+    'size' => $grid,
+    'palette' => $palette,
+    'numberGrid' => $numberGrid,
+    'image' => $filename
+];
+
+$jsonPath = $outputDir . '/' . $filename . '.json';
+
+if (file_put_contents($jsonPath, json_encode($jsonData, JSON_PRETTY_PRINT)) === false) {
+    http_response_code(500);
+    exit('Failed to save worksheet data.');
+}
+
+header('Location: preview.php?id=' . rawurlencode($filename));
 exit;

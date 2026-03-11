@@ -1,39 +1,35 @@
 <?php
 
-class Worksheet{
+class Worksheet
+{
+    public static function buildGrid($img, int $grid): array
+    {
+        $w = imagesx($img);
+        $h = imagesy($img);
 
-public static function buildGrid($img,$grid){
+        $cellW = max(1, (int)floor($w / $grid));
+        $cellH = max(1, (int)floor($h / $grid));
 
-$w=imagesx($img);
-$h=imagesy($img);
+        $data = [];
+        $pixels = [];
 
-$cellW=floor($w/$grid);
-$cellH=floor($h/$grid);
+        for ($y = 0; $y < $grid; $y++) {
+            for ($x = 0; $x < $grid; $x++) {
+                $px = min($w - 1, $x * $cellW);
+                $py = min($h - 1, $y * $cellH);
 
-$data=[];
-$pixels=[];
+                $rgb = imagecolorat($img, $px, $py);
 
-for($y=0;$y<$grid;$y++){
-for($x=0;$x<$grid;$x++){
+                $r = ($rgb >> 16) & 0xFF;
+                $g = ($rgb >> 8) & 0xFF;
+                $b = $rgb & 0xFF;
 
-$px=$x*$cellW;
-$py=$y*$cellH;
+                $pixel = [$r, $g, $b];
+                $pixels[] = $pixel;
+                $data[$y][$x] = $pixel;
+            }
+        }
 
-$rgb=imagecolorat($img,$px,$py);
-
-$r=($rgb>>16)&0xFF;
-$g=($rgb>>8)&0xFF;
-$b=$rgb&0xFF;
-
-$pixels[]=[$r,$g,$b];
-
-$data[$y][$x]=[$r,$g,$b];
-
-}
-}
-
-return [$data,$pixels];
-
-}
-
+        return [$data, $pixels];
+    }
 }
