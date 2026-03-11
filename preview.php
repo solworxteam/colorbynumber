@@ -88,7 +88,7 @@ $palette = $data['palette'];
 
         .btn {
             display: inline-block;
-            margin-top: 20px;
+            margin: 10px 5px;
             padding: 12px 20px;
             background: #2d7ef7;
             color: white;
@@ -127,10 +127,7 @@ $palette = $data['palette'];
                             $rgb = $color ? $color['rgb'] : [255, 255, 255];
                             $r = (int)$rgb[0];
                             $g = (int)$rgb[1];
- div style="margin-top: 30px;">
-    <a class="btn" href="download.php?id=<?php echo urlencode($id); ?>&type=numbered">Download Worksheet PDF</a>
-    <a class="btn" href="download.php?id=<?php echo urlencode($id); ?>&type=colored">Download Colored Preview PDF</a>
-</div
+                            $b = (int)$rgb[2];
                             $bgColor = "rgb($r, $g, $b)";
                         ?>
                         <td style="background-color: <?php echo $bgColor; ?>;">&nbsp;</td>
@@ -157,7 +154,10 @@ $palette = $data['palette'];
     <?php endforeach; ?>
 </div>
 
-<a class="btn" href="download.php?id=<?php echo urlencode($id); ?>">Download PDF</a>
+<div style="margin-top: 30px;">
+    <a class="btn" href="download.php?id=<?php echo urlencode($id); ?>&type=numbered">Download Worksheet PDF</a>
+    <a class="btn" href="download.php?id=<?php echo urlencode($id); ?>&type=colored">Download Colored Preview PDF</a>
+</div>
 
 </body>
 </html>
