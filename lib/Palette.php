@@ -191,21 +191,22 @@ class Palette
     }
 
     /**
-     * Extract colors from image and assign kids color names
-     * Keeps extracted colors for better quality, but names them after kids colors
+     * Extract colors from image and map to nearest kids colors
+     * Returns only the kids colors that are actually used
      */
-    public static function getExtractedPaletteWithKidsNames(array $extractedColors): array
+    public static function getKidsColorPaletteFromImage(array $extractedColors): array
     {
-        $kidsColors = self::getKidsPalette(11);
-        $palette = [];
+        $allKidsColors = self::getKidsPalette(11); // All available kids colors
+        $usedKidsColors = [];
+        $usedMap = [];
 
+        // For each extracted color, find nearest kids color
         foreach ($extractedColors as $rgb) {
-            // Find nearest kids color
-            $bestKidsColor = null;
+            $bestKidsIndex = -1;
             $bestDistance = PHP_FLOAT_MAX;
             $labPixel = self::rgbToLab($rgb);
 
-            foreach ($kidsColors as $kidsColor) {
+            foreach ($allKidsColors as $idx => $kidsColor) {
                 $labKidsColor = self::rgbToLab($kidsColor['rgb']);
                 $dL = $labPixel[0] - $labKidsColor[0];
                 $da = $labPixel[1] - $labKidsColor[1];
@@ -214,18 +215,17 @@ class Palette
 
                 if ($distance < $bestDistance) {
                     $bestDistance = $distance;
-                    $bestKidsColor = $kidsColor;
+                    $bestKidsIndex = $idx;
                 }
             }
 
-            // Use extracted RGB with kids color name
-            $palette[] = [
-                'rgb' => [$rgb[0], $rgb[1], $rgb[2]],
-                'name' => $bestKidsColor['name'] ?? 'Color',
-                'hex' => sprintf('%02x%02x%02x', $rgb[0], $rgb[1], $rgb[2])
-            ];
+            // Track which kids colors are used
+            if ($bestKidsIndex >= 0 && !isset($usedMap[$bestKidsIndex])) {
+                $usedMap[$bestKidsIndex] = true;
+                $usedKidsColors[] = $allKidsColors[$bestKidsIndex];
+            }
         }
 
-        return $palette;
+        return !empty($usedKidsColors) ? $usedKidsColors : array_slice($allKidsColors, 0, 1);
     }
 }

@@ -113,19 +113,20 @@ if ($originalWidth > Config::MAX_IMAGE_WIDTH || $originalHeight > Config::MAX_IM
 error_log("Building adaptive grid with size: $grid");
 [$rgbGrid, $pixels] = Worksheet::buildAdaptiveGrid($img, $grid);
 
-// Extract dominant colors from image and assign kids color names
+// Extract dominant colors and map to kids colors
 error_log("Extracting dominant colors from image");
 $extractedColors = ColorReducer::reduce($pixels, $colors, 20);
 error_log("Extracted " . count($extractedColors) . " dominant colors");
 
-// Get palette with extracted RGB values but kids color names
-$palette = Palette::getExtractedPaletteWithKidsNames($extractedColors);
-error_log("Palette colors: " . count($palette));
+// Get kids color palette (only colors that are actually represented in image)
+$palette = Palette::getKidsColorPaletteFromImage($extractedColors);
+error_log("Using " . count($palette) . " kids colors");
 
 $numberGrid = [];
 
 foreach ($rgbGrid as $y => $row) {
     foreach ($row as $x => $pixel) {
+        // Map to nearest kids color in palette
         $numberGrid[$y][$x] = Palette::nearestPaletteIndex($pixel, $palette);
     }
 }
