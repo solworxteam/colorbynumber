@@ -28,8 +28,9 @@ class Worksheet
     }
 
     public static function preprocessImage($img) {
-        imagefilter($img, IMG_FILTER_CONTRAST, 20);
-        imagefilter($img, IMG_FILTER_BRIGHTNESS, 5);
+        // Gentle contrast boost (not 20!) to enhance details without washing out colors
+        imagefilter($img, IMG_FILTER_CONTRAST, 5);
+        // Light smoothing to reduce noise without affecting colors
         imagefilter($img, IMG_FILTER_SMOOTH, 1);
         return $img;
     }
