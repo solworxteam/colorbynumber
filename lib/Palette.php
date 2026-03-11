@@ -93,17 +93,17 @@ class Palette
     public static function getKidsPalette(int $maxColors): array
     {
         $base = [
-            ['name' => 'Red',    'rgb' => [220, 60, 60]],
-            ['name' => 'Blue',   'rgb' => [70, 120, 220]],
-            ['name' => 'Yellow', 'rgb' => [245, 210, 60]],
-            ['name' => 'Green',  'rgb' => [70, 170, 90]],
-            ['name' => 'Orange', 'rgb' => [245, 150, 60]],
-            ['name' => 'Purple', 'rgb' => [140, 90, 190]],
-            ['name' => 'Pink',   'rgb' => [240, 150, 190]],
-            ['name' => 'Brown',  'rgb' => [140, 100, 70]],
-            ['name' => 'Grey',   'rgb' => [160, 160, 160]],
-            ['name' => 'Black',  'rgb' => [40, 40, 40]],
-            ['name' => 'White',  'rgb' => [245, 245, 245]],
+            ['name' => 'Red',       'rgb' => [239, 28, 58]],
+            ['name' => 'Orange',    'rgb' => [255, 119, 24]],
+            ['name' => 'Yellow',    'rgb' => [255, 222, 0]],
+            ['name' => 'Green',     'rgb' => [40, 168, 70]],
+            ['name' => 'Blue',      'rgb' => [0, 102, 204]],
+            ['name' => 'Purple',    'rgb' => [128, 0, 128]],
+            ['name' => 'Brown',     'rgb' => [139, 69, 19]],
+            ['name' => 'Pink',      'rgb' => [255, 192, 203]],
+            ['name' => 'Gray',      'rgb' => [128, 128, 128]],
+            ['name' => 'Black',     'rgb' => [0, 0, 0]],
+            ['name' => 'White',     'rgb' => [255, 255, 255]],
         ];
 
         $maxColors = max(2, min(count($base), $maxColors));
