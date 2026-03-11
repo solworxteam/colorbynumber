@@ -9,7 +9,6 @@ ini_set('error_log', __DIR__ . '/error.log');
 require __DIR__ . '/lib/Config.php';
 require __DIR__ . '/lib/Worksheet.php';
 require __DIR__ . '/lib/Palette.php';
-require __DIR__ . '/lib/ColorReducer.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
