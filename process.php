@@ -105,31 +105,17 @@ if ($originalWidth > Config::MAX_IMAGE_WIDTH || $originalHeight > Config::MAX_IM
     }
 }
 
-// Build adaptive grid for better detail preservation
-error_log("Building adaptive grid with size: $grid");
-[$rgbGrid, $pixels] = Worksheet::buildAdaptiveGrid($img, $grid);
+// Get fixed kids color palette
+error_log("Loading kids color palette with $colors colors");
+$palette = Palette::getKidsPalette($colors);
+error_log("Palette colors: " . count($palette));
 
-// Extract dominant colors and map to kids colors
-error_log("Extracting dominant colors from image");
-$extractedColors = ColorReducer::reduce($pixels, $colors, 20);
-error_log("Extracted " . count($extractedColors) . " dominant colors");
+// Generate worksheet: pixelated grid → quantized to kids colors → noise reduction
+error_log("Generating worksheet: grid=$grid colors=$colors");
+$result = Worksheet::generateWorksheet($img, $grid, $palette);
+$numberGrid = $result['numberGrid'];
 
-// Get kids color palette (only colors that are actually represented in image)
-$palette = Palette::getKidsColorPaletteFromImage($extractedColors);
-error_log("Using " . count($palette) . " kids colors");
-
-$numberGrid = [];
-
-foreach ($rgbGrid as $y => $row) {
-    foreach ($row as $x => $pixel) {
-        // Map to nearest kids color in palette
-        $numberGrid[$y][$x] = Palette::nearestPaletteIndex($pixel, $palette);
-    }
-}
-
-// Post-processing: smooth out single-pixel anomalies
-error_log("Smoothing anomalies in grid");
-Worksheet::smoothAnomalies($numberGrid);
+error_log("Worksheet generated successfully");
 
 $jsonData = [
     'size' => $grid,
