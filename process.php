@@ -93,6 +93,14 @@ error_log("Image created successfully");
 $originalWidth = imagesx($img);
 $originalHeight = imagesy($img);
 
+// Preprocess image (enhance contrast, reduce noise)
+error_log("Preprocessing image");
+$img = Worksheet::preprocessImage($img);
+
+// Remove light background if detected
+error_log("Attempting background removal");
+$img = Worksheet::removeBackground($img, 40);
+
 if ($originalWidth > Config::MAX_IMAGE_WIDTH || $originalHeight > Config::MAX_IMAGE_HEIGHT) {
     $img = Worksheet::resizeImage($img, Config::MAX_IMAGE_WIDTH, Config::MAX_IMAGE_HEIGHT, Config::RESIZE_QUALITY);
     if ($img === false) {
@@ -101,8 +109,14 @@ if ($originalWidth > Config::MAX_IMAGE_WIDTH || $originalHeight > Config::MAX_IM
     }
 }
 
-[$rgbGrid, $pixels] = Worksheet::buildGrid($img, $grid);
-$palette = Palette::getKidsPalette($colors);
+// Build adaptive grid for better detail preservation
+error_log("Building adaptive grid with size: $grid");
+[$rgbGrid, $pixels] = Worksheet::buildAdaptiveGrid($img, $grid);
+
+// Extract dominant colors from image instead of using fixed palette
+error_log("Extracting colors from image");
+$palette = Palette::extractFromImage($pixels, $colors);
+error_log("Extracted " . count($palette) . " colors from image");
 
 $numberGrid = [];
 
@@ -111,6 +125,10 @@ foreach ($rgbGrid as $y => $row) {
         $numberGrid[$y][$x] = Palette::nearestPaletteIndex($pixel, $palette);
     }
 }
+
+// Post-processing: smooth out single-pixel anomalies
+error_log("Smoothing anomalies in grid");
+Worksheet::smoothAnomalies($numberGrid);
 
 $jsonData = [
     'size' => $grid,
