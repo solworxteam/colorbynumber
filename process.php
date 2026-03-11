@@ -114,9 +114,9 @@ error_log("Building adaptive grid with size: $grid");
 [$rgbGrid, $pixels] = Worksheet::buildAdaptiveGrid($img, $grid);
 
 // Extract dominant colors from image instead of using fixed palette
-error_log("Extracting colors from image");
-$palette = Palette::extractFromImage($pixels, $colors);
-error_log("Extracted " . count($palette) . " colors from image");
+error_log("Using kid-friendly palette");
+$palette = Palette::getKidsPalette($colors);
+error_log("Palette colors: " . count($palette));
 
 $numberGrid = [];
 
