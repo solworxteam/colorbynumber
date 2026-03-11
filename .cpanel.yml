@@ -13,3 +13,5 @@ deployment:
     - /bin/cp lib/ColorReducer.php $DEPLOYPATH/lib/
     - /bin/cp lib/Worksheet.php $DEPLOYPATH/lib/
     - /bin/cp lib/fpdf.php $DEPLOYPATH/lib/
+    - /bin/mkdir -p $DEPLOYPATH/lib/font
+    - /bin/cp -r lib/font/* $DEPLOYPATH/lib/font/
