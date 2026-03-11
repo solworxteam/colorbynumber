@@ -93,10 +93,6 @@ error_log("Image created successfully");
 $originalWidth = imagesx($img);
 $originalHeight = imagesy($img);
 
-// Preprocess image (reduce noise)
-error_log("Preprocessing image");
-$img = Worksheet::preprocessImage($img);
-
 if ($originalWidth > Config::MAX_IMAGE_WIDTH || $originalHeight > Config::MAX_IMAGE_HEIGHT) {
     $img = Worksheet::resizeImage($img, Config::MAX_IMAGE_WIDTH, Config::MAX_IMAGE_HEIGHT, Config::RESIZE_QUALITY);
     if ($img === false) {
