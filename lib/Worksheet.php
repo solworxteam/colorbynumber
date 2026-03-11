@@ -323,8 +323,8 @@ class Worksheet
 
     /**
      * Resize image while maintaining aspect ratio
-     * 
      * Used to fit large images into memory before downsampling.
+     * PHP 8 compatible: returns GdImage object, not resource type.
      */
     public static function resizeImage($img, int $maxWidth, int $maxHeight, int $quality = 85)
     {
