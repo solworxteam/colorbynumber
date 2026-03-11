@@ -64,7 +64,9 @@ if (!move_uploaded_file($_FILES['image']['tmp_name'], $storedPath)) {
     exit(Config::getErrorMessage('upload_failed'));
 }
 
-error_log("File stored at: $storedPath, file_exists=" . (file_exists($storedPath) ? 'yes' : 'no') . ", size=" . filesize($storedPath));
+$fileSize = filesize($storedPath);
+$exists = file_exists($storedPath) ? 'yes' : 'no';
+error_log("File stored at: $storedPath, file_exists=$exists, size=$fileSize");
 
 $imageData = file_get_contents($storedPath);
 if ($imageData === false) {
@@ -73,11 +75,15 @@ if ($imageData === false) {
     exit(Config::getErrorMessage('read_failed'));
 }
 
-error_log("Image data read: size=" . strlen($imageData) . ", first 8 bytes=" . bin2hex(substr($imageData, 0, 8)));
+$imgDataSize = strlen($imageData);
+$imgHex = bin2hex(substr($imageData, 0, 8));
+error_log("Image data read: size=$imgDataSize, first 8 bytes=$imgHex");
 
 $img = imagecreatefromstring($imageData);
 if ($img === false) {
-    error_log("ERROR: imagecreatefromstring failed. File: $storedPath, Size: " . strlen($imageData) . ", Hex: " . bin2hex(substr($imageData, 0, 32)));
+    $imgDataSize = strlen($imageData);
+    $imgHex32 = bin2hex(substr($imageData, 0, 32));
+    error_log("ERROR: imagecreatefromstring failed. File: $storedPath, Size: $imgDataSize, Hex: $imgHex32");
     http_response_code(500);
     exit(Config::getErrorMessage('invalid_image'));
 }
