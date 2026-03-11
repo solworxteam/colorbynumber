@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 
+require __DIR__ . '/lib/Config.php';
 require __DIR__ . '/lib/Worksheet.php';
 require __DIR__ . '/lib/Palette.php';
 
@@ -15,11 +16,17 @@ if (
     !is_uploaded_file($_FILES['image']['tmp_name'])
 ) {
     http_response_code(400);
-    exit('Missing form fields or image.');
+    exit(Config::getErrorMessage('missing_fields'));
 }
 
-$grid = max(10, min(80, (int)$_POST['grid']));
-$colors = max(2, min(11, (int)$_POST['colors']));
+// Validate file size
+if ($_FILES['image']['size'] > Config::MAX_FILE_SIZE) {
+    http_response_code(413);
+    exit(Config::getErrorMessage('file_too_large'));
+}
+
+$grid = max(Config::MIN_GRID_SIZE, min(Config::MAX_GRID_SIZE, (int)$_POST['grid']));
+$colors = max(Config::MIN_COLORS, min(Config::MAX_COLORS, (int)$_POST['colors']));
 
 $uploadDir = __DIR__ . '/uploads';
 $outputDir = __DIR__ . '/output';
@@ -36,11 +43,10 @@ if (!is_dir($outputDir) && !mkdir($outputDir, 0755, true)) {
 
 $originalName = $_FILES['image']['name'] ?? 'upload';
 $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
-$allowed = ['jpg', 'jpeg', 'png', 'webp'];
 
-if (!in_array($extension, $allowed, true)) {
+if (!in_array($extension, Config::ALLOWED_EXTENSIONS, true)) {
     http_response_code(400);
-    exit('Only JPG, JPEG, PNG and WEBP are allowed.');
+    exit(Config::getErrorMessage('invalid_extension'));
 }
 
 $filename = uniqid('img_', true) . '.' . $extension;
@@ -55,13 +61,25 @@ $imageData = file_get_contents($storedPath);
 if ($imageData === false) {
     http_response_code(500);
     exit('Failed to read image.');
+}Config::getErrorMessage('read_failed'));
 }
 
 $img = imagecreatefromstring($imageData);
 if ($img === false) {
     http_response_code(500);
-    exit('Failed to create image resource. Check PHP GD.');
+    exit(Config::getErrorMessage('invalid_image'));
 }
+
+// Validate and resize image if necessary
+$originalWidth = imagesx($img);
+$originalHeight = imagesy($img);
+
+if ($originalWidth > Config::MAX_IMAGE_WIDTH || $originalHeight > Config::MAX_IMAGE_HEIGHT) {
+    $img = Worksheet::resizeImage($img, Config::MAX_IMAGE_WIDTH, Config::MAX_IMAGE_HEIGHT, Config::RESIZE_QUALITY);
+    if ($img === false) {
+        http_response_code(500);
+        exit(Config::getErrorMessage('image_too_large'));
+    }
 
 [$rgbGrid, $pixels] = Worksheet::buildGrid($img, $grid);
 $palette = Palette::getKidsPalette($colors);
@@ -71,9 +89,9 @@ $numberGrid = [];
 foreach ($rgbGrid as $y => $row) {
     foreach ($row as $x => $pixel) {
         $numberGrid[$y][$x] = Palette::nearestPaletteIndex($pixel, $palette);
-    }
-}
-
+    })) === false) {
+    http_response_code(500);
+    exit(Config::getErrorMessage('save_failed')
 $jsonData = [
     'size' => $grid,
     'palette' => $palette,
