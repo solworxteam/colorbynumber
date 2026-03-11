@@ -276,7 +276,7 @@ class Worksheet
      * Background cells (0) remain white. Colored cells use their palette color.
      * Used for parent reference and PDF output.
      */
-    public static function generateColoredPreview(array $numberGrid, array $palette, int $cellSize = 20): ?resource
+    public static function generateColoredPreview(array $numberGrid, array $palette, int $cellSize = 20)
     {
         $rows = count($numberGrid);
         if ($rows === 0) return null;
@@ -326,7 +326,7 @@ class Worksheet
      * 
      * Used to fit large images into memory before downsampling.
      */
-    public static function resizeImage($img, int $maxWidth, int $maxHeight, int $quality = 85): ?resource
+    public static function resizeImage($img, int $maxWidth, int $maxHeight, int $quality = 85)
     {
         $origWidth = imagesx($img);
         $origHeight = imagesy($img);
